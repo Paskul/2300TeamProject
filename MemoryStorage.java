@@ -1,5 +1,6 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class MemoryStorage {
     Map<String, Double> values = new HashMap<String, Double>();
@@ -10,10 +11,8 @@ public class MemoryStorage {
         // if there is already one, override it
         if (values.containsKey(variableName)) {
             values.remove(variableName);
-            values.put(variableName, val);
-        } else {
-            values.put(variableName, val);
         }
+        values.put(variableName, val);
     }
     
     double recall(String variableName) {
@@ -30,5 +29,13 @@ public class MemoryStorage {
     void clear() {
         // for all the vars, go through and remove
         values.clear();
+    }
+
+    public Set<String> getVariableNames() {
+        return values.keySet();
+    }
+
+    public Map<String, Double> getAllValues() {
+        return new HashMap<>(values);
     }
 }
