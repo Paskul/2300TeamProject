@@ -1,14 +1,13 @@
 import javax.swing.*;
 import javax.swing.plaf.ColorUIResource;
-
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.nio.channels.IllegalChannelGroupException;
 import java.util.Set;
+import java.util.Stack;
+import java.util.List;
+import java.util.ArrayList;
 
-
-//i also think this should be able to work when you press the button: 
-//using mouspad & using keyboard as well
 
 //need to implement action listener for when delete is found like if we
 //type 13 but meant 12 should be able to delete the 3, and continue witout clearing the entire thing. 
@@ -111,49 +110,21 @@ public class CalculatorPanel extends JFrame {
         container.add(button);
     }
 
-    /*
 
+    // saves value from display into memory under the correct name
     private void storeValue() {
-        String value = displayField.getText();
-        String name = JOptionPane.showInputDialog(this, "Enter variable name: ");
-        if (name != null && !name.isEmpty()) {
-            try {
-                double num = Double.parseDouble(value);
-                memory.store(name, num);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid value", "error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private void recallValue() {
-        String name = JOptionPane.showInputDialog(this, "Enter variable name to use: ");
-        if (name != null && !name.isEmpty()) {
-            try {
-                double value = memory.recall(name);
-                displayField.setText(String.valueOf(value));
-            } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    */
-
-    // memory store variable
-    private void storeValue() {
-        String value = displayField.getText();
+        String value = displayField.getText();//get the current value from mem
         if (value.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No value to store", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // ask for variable name to store the current value
+      
         String name = JOptionPane.showInputDialog(this, "Enter variable name to store the value:");
         if (name != null && !name.trim().isEmpty()) {
             try {
-                double num = Double.parseDouble(value);
-                memory.store(name, num);
+                double num = Double.parseDouble(value);//convert to double 
+                memory.store(name, num);//store number in mem
                 JOptionPane.showMessageDialog(this, "Value stored under '" + name + "'", "Stored", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid value", "Error", JOptionPane.ERROR_MESSAGE);
@@ -161,28 +132,28 @@ public class CalculatorPanel extends JFrame {
         }
     }
 
-    // pull variable value
+    //handles the stored variable values
     private void recallValue() {
-        Set<String> variables = memory.getVariableNames();
+        Set<String> variables = memory.getVariableNames();//all variable names stored in mem
         if (variables.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No variables stored", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        JPanel panel = new JPanel();
+        JPanel panel = new JPanel();//to display 
         panel.add(new JLabel("Select a variable:"));
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-        variables.forEach(model::addElement);
+        variables.forEach(model::addElement);//add each variable 
         JComboBox<String> comboBox = new JComboBox<>(model);
-        panel.add(comboBox);
+        panel.add(comboBox);//add to panel
 
-        // show dialog with variable names
+        // show with variable names 
         if (JOptionPane.showConfirmDialog(this, panel, "Recall Value", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
             String key = (String) comboBox.getSelectedItem();
             if (key != null && !key.isEmpty()) {
                 try {
-                    double value = memory.recall(key);
-                    displayField.setText(String.valueOf(value));
+                    double value = memory.recall(key);//get the value from mem
+                    displayField.setText(String.valueOf(value));//display the value 
                     JOptionPane.showMessageDialog(this, "Value recalled: " + value, "Recalled", JOptionPane.INFORMATION_MESSAGE);
                 } catch (IllegalArgumentException ex) {
                     JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -191,41 +162,73 @@ public class CalculatorPanel extends JFrame {
         }
     }
 
-    // from display, do calculation of what user inputted
-    // error if mutliple "val + val + val" for example
-    // can cur only handle 1 operation
-    // probably can do more? just regex on string for multiple... recursion?
+
+    //handles the entire calculation process 
     private void processCalculation() {
         try {
-            String[] tokens = displayField.getText().split(" ");
-            double result = 0;
-            double operand1 = Double.parseDouble(tokens[0]);
-            double operand2 = Double.parseDouble(tokens[2]);
-            String operator = tokens[1];
-
-            switch (operator) {
-                case "+":
-                    result = operations.add(operand1, operand2);
-                    break;
-                case "-":
-                    result = operations.subtract(operand1, operand2);
-                    break;
-                case "*":
-                    result = operations.multiply(operand1, operand2);
-                    break;
-                case "/":
-                    if (operand2 == 0) {
-                        JOptionPane.showMessageDialog(this, "No division by zero!", "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                    result = operations.divide(operand1, operand2);
-                    break;
-            }
-            displayField.setText(String.valueOf(result));
-        } catch (Exception ex) {
+            String[] tokens = displayField.getText().trim().split("\\s+");//clean up the text from the calculator
+            String[] postfixTokens = convertToPostfix(tokens);//convert the expression to postfix
+            double result = evaluatePostfix(postfixTokens);//calculate the result 
+            displayField.setText(String.valueOf(result));//display the result 
+        } catch (Exception ex) {//error message
             JOptionPane.showMessageDialog(this, "Invalid input", "Error", JOptionPane.INFORMATION_MESSAGE);
         }
+    }    
+    
+    private String[] convertToPostfix(String[] infixTokens) {
+        Stack<String> operatorStack = new Stack<>();//to hold oeprators while we convert 
+        List<String> outputList = new ArrayList<>();//to help build the output from the postfix exp
+    
+        for (String token : infixTokens) {
+            if (token.matches("\\d+\\.?\\d*")) {//to include decimal numbers 
+                outputList.add(token);
+            } else if (token.matches("[+\\-*/]")) { //is token an operator 
+                while (!operatorStack.isEmpty() && hasHigherPrecedence(operatorStack.peek(), token)) {
+                    outputList.add(operatorStack.pop());//pop from stack to the output list 
+                }
+                operatorStack.push(token);
+            }
+        }
+    
+        while (!operatorStack.isEmpty()) {
+            outputList.add(operatorStack.pop());
+        }
+    
+        return outputList.toArray(new String[0]);//output list to an array 
     }
+    
+    
+    //check if one operator has higher precedent than another
+    private boolean hasHigherPrecedence(String op1, String op2) {
+        if ((op1.equals("*") || op1.equals("/")) && (op2.equals("+") || op2.equals("-"))) {
+            return true;
+        }
+        if (op1.equals(op2)) {//if both operators are the same 
+            return true;
+        }
+        return false;
+    }
+    
+    
+    private double evaluatePostfix(String[] postfixTokens) {
+        Stack<Double> stack = new Stack<>();//stack to hold the operands 
+        for (String token : postfixTokens) {//go through the postfix expression
+            if (token.matches("\\d+\\.?\\d*")) { 
+                stack.push(Double.parseDouble(token));
+            } else if (token.matches("[+\\-*/]")) {//check if it is an operator
+                double operand2 = stack.pop();
+                double operand1 = stack.pop();
+                switch (token) {//performing the operation based on operator
+                    case "+": stack.push(operand1 + operand2); break;
+                    case "-": stack.push(operand1 - operand2); break;
+                    case "*": stack.push(operand1 * operand2); break;
+                    case "/": stack.push(operand1 / operand2); break;
+                }
+            }
+        }
+        return stack.pop();//result which is the only element left in the stack 
+    }    
+    
 
     public static void main(String[] args) {
         new CalculatorPanel();
