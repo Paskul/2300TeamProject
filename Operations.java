@@ -1,6 +1,7 @@
 import java.lang.Math;
 
 public class Operations {
+    
     double add(double x, double y) {
         return x + y;
     }
@@ -34,18 +35,22 @@ public class Operations {
      }
 
      int not(int x){//may not be right idk and may need to change return value it will likely give errors
-        return Integer.toBinaryString(~x);
+        //return Integer.toBinaryString(~x);
+        return ~x;
      }
      
-     int shiftLeft(int x, int y){
+     double shiftLeft(int x, int y){
         return (x * (Math.pow(y,2)));
      }
 
-     int shiftRight(int x, int y){
+     double shiftRight(int x, int y){
         return (x / (Math.pow(y,2)));
      }
 
-     String convertBase(int x, int fromBase, int toBase){
-        
+     int convertBase(String x, int fromBase, int toBase){
+        int decimalValue = Integer.parseInt(x, fromBase);
+        // Convert the decimal integer to a string in 'toBase', then parse it back to an integer
+        String converted = Integer.toString(decimalValue, toBase);
+        return Integer.parseInt(converted, toBase);
      }
 }
